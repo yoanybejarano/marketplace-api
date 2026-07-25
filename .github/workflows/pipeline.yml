@@ -2,7 +2,7 @@ name: Library Event Producer CI/CD
 
 on:
   push:
-    branches: ["**"]
+    branches: [ "**" ]
   pull_request:
     branches: [ master ]
 
@@ -52,7 +52,7 @@ jobs:
 
   test:
     name: Unit & Integration Tests
-    needs: [lint, security]
+    needs: [ lint, security ]
     runs-on: ubuntu-latest
 
     steps:
@@ -83,7 +83,7 @@ jobs:
 
   package:
     name: Package Application
-    needs: [test]
+    needs: [ test ]
     runs-on: ubuntu-latest
 
     steps:

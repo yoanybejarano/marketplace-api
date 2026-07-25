@@ -13,4 +13,5 @@ public record ProductDto(
         String sku,
         String imageUrl,
         Instant createdAt
-) {}
+) {
+}

@@ -1,12 +1,12 @@
 package io.hatefulbug.marketplaceapi.payment;
 
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.stereotype.Component;
 
 @Component
 public class FakePaymentGateway implements PaymentGateway {
@@ -46,11 +46,11 @@ public class FakePaymentGateway implements PaymentGateway {
     public PaymentResponse capture(String paymentId) {
 
         FakePayment payment = database.get(paymentId);
-        if (payment == null){
+        if (payment == null) {
             throw new RuntimeException("Payment not found");
         }
 
-        if (payment.getStatus() != PaymentStatus.AUTHORIZED){
+        if (payment.getStatus() != PaymentStatus.AUTHORIZED) {
             throw new RuntimeException("Payment cannot be captured");
         }
 
@@ -64,11 +64,11 @@ public class FakePaymentGateway implements PaymentGateway {
 
         FakePayment payment = database.get(paymentId);
 
-        if (payment == null){
+        if (payment == null) {
             throw new RuntimeException("Payment not found");
         }
 
-        if (payment.getStatus() != PaymentStatus.CAPTURED){
+        if (payment.getStatus() != PaymentStatus.CAPTURED) {
             throw new RuntimeException("Only captured payments can be refunded");
         }
 
@@ -86,7 +86,7 @@ public class FakePaymentGateway implements PaymentGateway {
     public PaymentResponse getPayment(String paymentId) {
 
         FakePayment payment = database.get(paymentId);
-        if (payment == null){
+        if (payment == null) {
             throw new RuntimeException("Payment not found");
         }
         return toResponse(payment);
@@ -96,7 +96,7 @@ public class FakePaymentGateway implements PaymentGateway {
     public void cancel(String paymentId) {
 
         FakePayment payment = database.get(paymentId);
-        if (payment == null){
+        if (payment == null) {
             throw new RuntimeException("Payment not found");
         }
 

@@ -9,4 +9,5 @@ public record ReviewDto(
         Integer rating,
         String comment,
         Instant createdAt
-) {}
+) {
+}

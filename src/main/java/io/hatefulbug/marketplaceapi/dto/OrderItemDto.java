@@ -7,4 +7,5 @@ public record OrderItemDto(
         ProductDto product,
         Integer quantity,
         BigDecimal unitPrice
-) {}
+) {
+}

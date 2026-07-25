@@ -9,4 +9,5 @@ public record AddressDto(
         String zipCode,
         String country,
         Boolean isDefault
-) {}
+) {
+}

@@ -1,12 +1,13 @@
 package io.hatefulbug.marketplaceapi.request;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Order request information")
 public record OrderRequest(
@@ -18,4 +19,10 @@ public record OrderRequest(
         @Schema(description = "Order Items")
         @NotEmpty(message = "Order must contain at least one item")
         List<@Valid @NotNull OrderItemRequest> items
-) {}
+) {
+        public OrderRequest {
+                items = items == null
+                        ? List.of()
+                        : List.copyOf(items);
+        }
+}

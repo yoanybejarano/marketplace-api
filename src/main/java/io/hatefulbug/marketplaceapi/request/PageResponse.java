@@ -9,4 +9,10 @@ public record PageResponse<T>(
         long totalElements,
         int totalPages,
         boolean last
-) {}
+) {
+    public PageResponse {
+        content = content == null
+                ? List.of()
+                : List.copyOf(content);
+    }
+}

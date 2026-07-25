@@ -1,10 +1,11 @@
 package io.hatefulbug.marketplaceapi.service;
 
+import org.springframework.stereotype.Service;
+
 import io.hatefulbug.marketplaceapi.dto.CustomerDto;
 import io.hatefulbug.marketplaceapi.entity.Customer;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.repository.CustomerRepository;
-import org.springframework.stereotype.Service;
 
 @Service
 public class CustomerService {

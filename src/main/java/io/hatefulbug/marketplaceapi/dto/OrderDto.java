@@ -11,4 +11,11 @@ public record OrderDto(
         String status,
         BigDecimal totalAmount,
         List<OrderItemDto> orderItems
-) {}
+) {
+
+    public OrderDto {
+        orderItems = orderItems == null
+                ? List.of()
+                : List.copyOf(orderItems);
+    }
+}
