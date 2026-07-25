@@ -6,8 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class MarketplaceApiApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(MarketplaceApiApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(MarketplaceApiApplication.class, args);
+    }
 
 }
+

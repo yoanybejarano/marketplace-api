@@ -9,4 +9,5 @@ public record PaymentDto(
         String paymentStatus,
         String transactionId,
         Instant paymentDate
-) {}
+) {
+}

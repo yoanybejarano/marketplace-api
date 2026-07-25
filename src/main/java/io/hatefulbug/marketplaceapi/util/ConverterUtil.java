@@ -1,9 +1,19 @@
 package io.hatefulbug.marketplaceapi.util;
 
-import io.hatefulbug.marketplaceapi.dto.*;
-import io.hatefulbug.marketplaceapi.entity.*;
-
 import java.util.List;
+
+import io.hatefulbug.marketplaceapi.dto.CategoryDto;
+import io.hatefulbug.marketplaceapi.dto.CustomerDto;
+import io.hatefulbug.marketplaceapi.dto.OrderDto;
+import io.hatefulbug.marketplaceapi.dto.OrderItemDto;
+import io.hatefulbug.marketplaceapi.dto.PaymentDto;
+import io.hatefulbug.marketplaceapi.dto.ProductDto;
+import io.hatefulbug.marketplaceapi.entity.Category;
+import io.hatefulbug.marketplaceapi.entity.Customer;
+import io.hatefulbug.marketplaceapi.entity.Order;
+import io.hatefulbug.marketplaceapi.entity.OrderItem;
+import io.hatefulbug.marketplaceapi.entity.Payment;
+import io.hatefulbug.marketplaceapi.entity.Product;
 
 public class ConverterUtil {
 
@@ -21,7 +31,8 @@ public class ConverterUtil {
     }
 
     public static OrderItemDto toOrderItemDto(OrderItem orderItem) {
-        return new OrderItemDto(orderItem.getId(), toProductDto(orderItem.getProduct()), orderItem.getQuantity(), orderItem.getUnitPrice());
+        return new OrderItemDto(orderItem.getId(), toProductDto(orderItem.getProduct()),
+                orderItem.getQuantity(), orderItem.getUnitPrice());
     }
 
     public static CustomerDto toCustomerDto(Customer customer) {
@@ -67,6 +78,7 @@ public class ConverterUtil {
     }
 
 }
+
 
 
 

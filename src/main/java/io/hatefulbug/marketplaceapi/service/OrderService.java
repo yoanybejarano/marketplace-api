@@ -1,31 +1,32 @@
 package io.hatefulbug.marketplaceapi.service;
 
-import io.hatefulbug.marketplaceapi.dto.CustomerDto;
-import io.hatefulbug.marketplaceapi.dto.OrderDto;
-import io.hatefulbug.marketplaceapi.entity.Customer;
-import io.hatefulbug.marketplaceapi.entity.Order;
-import io.hatefulbug.marketplaceapi.entity.OrderItem;
-import io.hatefulbug.marketplaceapi.entity.Product;
-import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
-import io.hatefulbug.marketplaceapi.dto.OrderStatus;
-import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
-import io.hatefulbug.marketplaceapi.request.OrderRequest;
-import io.hatefulbug.marketplaceapi.repository.OrderRepository;
-import io.hatefulbug.marketplaceapi.util.ConverterUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import io.hatefulbug.marketplaceapi.dto.CustomerDto;
+import io.hatefulbug.marketplaceapi.dto.OrderDto;
+import io.hatefulbug.marketplaceapi.dto.OrderStatus;
+import io.hatefulbug.marketplaceapi.entity.Customer;
+import io.hatefulbug.marketplaceapi.entity.Order;
+import io.hatefulbug.marketplaceapi.entity.OrderItem;
+import io.hatefulbug.marketplaceapi.entity.Product;
+import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
+import io.hatefulbug.marketplaceapi.repository.OrderRepository;
+import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
+import io.hatefulbug.marketplaceapi.request.OrderRequest;
+import io.hatefulbug.marketplaceapi.util.ConverterUtil;
+
 @Service
 public class OrderService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OrderService.class);
     private final OrderRepository orderRepository;
     private final CustomerService customerService;
     private final ProductService productService;
@@ -78,7 +79,7 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
 
         Order orderResult = orderRepository.save(order);
-        logger.info("Order ID: {} placed successfully", orderResult.getId());
+        LOGGER.info("Order ID: {} placed successfully", orderResult.getId());
         return ConverterUtil.toOrderDto(orderResult);
     }
 
@@ -87,7 +88,7 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
         order.setStatus(status);
-        logger.info("Order ID: {} changed status to {}", order.getId(), status.name());
+        LOGGER.info("Order ID: {} changed status to {}", order.getId(), status.name());
         orderRepository.save(order);
     }
 }

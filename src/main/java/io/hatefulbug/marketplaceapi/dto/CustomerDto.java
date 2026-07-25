@@ -9,4 +9,5 @@ public record CustomerDto(
         String email,
         String phone,
         Instant createdAt
-) {}
+) {
+}
