@@ -34,7 +34,7 @@
             <property name="groups" value="java,javax,jakarta,org,com,*"/>
             <property name="ordered" value="true"/>
             <property name="separated" value="true"/>
-            <property name="option" value="top"/>
+            <property name="option" value="bottom"/>
             <property name="sortStaticImportsAlphabetically" value="true"/>
             <property name="caseSensitive" value="true"/>
         </module>
@@ -98,6 +98,11 @@
 
         <module name="RedundantModifier"/>
 
+    </module>
+
+    <module name="SuppressionSingleFilter">
+        <property name="checks" value="MethodName"/>
+        <property name="files" value=".*Test\.java|.*Tests\.java"/>
     </module>
 
 </module>
