@@ -1,6 +1,7 @@
-package io.hatefulbug.marketplaceapi.dto;
+package io.hatefulbug.marketplaceapi.enums;
 
 public enum OrderStatus {
+    PENDING,
     PROCESSING,
     PAID,
     REFUNDED,

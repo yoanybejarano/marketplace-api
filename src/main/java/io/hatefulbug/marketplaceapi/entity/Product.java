@@ -2,7 +2,10 @@ package io.hatefulbug.marketplaceapi.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -11,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -41,10 +45,6 @@ public class Product {
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @ColumnDefault("0")
-    @Column(name = "stock_quantity")
-    private Integer stockQuantity;
-
     @Column(name = "sku", nullable = false, length = 50)
     private String sku;
 
@@ -55,5 +55,18 @@ public class Product {
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @OneToMany(
+            mappedBy = "product",
+            fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<Inventory> inventories = new ArrayList<>();
+
+    public int getStockQuantity() {
+        return inventories.stream()
+                .mapToInt(Inventory::getAvailableQuantity)
+                .sum();
+    }
 
 }

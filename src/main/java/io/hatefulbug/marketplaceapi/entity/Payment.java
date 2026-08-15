@@ -18,9 +18,9 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import io.hatefulbug.marketplaceapi.payment.PaymentGatewayType;
-import io.hatefulbug.marketplaceapi.payment.PaymentMethod;
-import io.hatefulbug.marketplaceapi.payment.PaymentStatus;
+import io.hatefulbug.marketplaceapi.enums.PaymentGatewayType;
+import io.hatefulbug.marketplaceapi.enums.PaymentMethod;
+import io.hatefulbug.marketplaceapi.enums.PaymentStatus;
 import lombok.Getter;
 import lombok.Setter;
 

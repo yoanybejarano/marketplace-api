@@ -1,4 +1,4 @@
-package io.hatefulbug.marketplaceapi.payment;
+package io.hatefulbug.marketplaceapi.enums;
 
 public enum PaymentStatus {
 

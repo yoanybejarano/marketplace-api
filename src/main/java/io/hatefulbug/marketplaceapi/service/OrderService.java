@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import io.hatefulbug.marketplaceapi.dto.CustomerDto;
 import io.hatefulbug.marketplaceapi.dto.OrderDto;
-import io.hatefulbug.marketplaceapi.dto.OrderStatus;
 import io.hatefulbug.marketplaceapi.entity.Customer;
 import io.hatefulbug.marketplaceapi.entity.Order;
 import io.hatefulbug.marketplaceapi.entity.OrderItem;
 import io.hatefulbug.marketplaceapi.entity.Product;
+import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
@@ -61,7 +61,7 @@ public class OrderService {
         for (OrderItemRequest itemDto : orderRequest.items()) {
             Product product = productService.getProductById(itemDto.productId());
 
-            productService.deductStock(product.getId(), itemDto.quantity());
+            productService.deductStock(product.getId(), itemDto.locationId(), itemDto.quantity());
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);

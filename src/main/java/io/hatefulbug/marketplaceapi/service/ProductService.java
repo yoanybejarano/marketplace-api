@@ -8,9 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.hatefulbug.marketplaceapi.dto.ProductDto;
+import io.hatefulbug.marketplaceapi.entity.Inventory;
 import io.hatefulbug.marketplaceapi.entity.Product;
 import io.hatefulbug.marketplaceapi.exception.InsufficientStockException;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
+import io.hatefulbug.marketplaceapi.repository.InventoryRepository;
 import io.hatefulbug.marketplaceapi.repository.ProductRepository;
 import io.hatefulbug.marketplaceapi.request.PageResponse;
 import io.hatefulbug.marketplaceapi.util.ConverterUtil;
@@ -21,9 +23,12 @@ public class ProductService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProductService.class);
     private final ProductRepository productRepository;
+    private final InventoryRepository inventoryRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository,
+                          InventoryRepository inventoryRepository) {
         this.productRepository = productRepository;
+        this.inventoryRepository = inventoryRepository;
     }
 
     public PageResponse<ProductDto> getAllProducts(int page, int size) {
@@ -44,24 +49,57 @@ public class ProductService {
     }
 
     @Transactional
-    public void deductStock(Integer productId, int quantity) {
-        LOGGER.debug("Attempting to deduct stock. ProductID: {} | Quantity: {}", productId, quantity);
+    public void deductStock(
+            Integer productId,
+            Integer locationId,
+            int quantity
+    ) {
+        LOGGER.debug(
+                "Attempting to deduct stock. ProductID: {} | LocationID: {} | Quantity: {}",
+                productId,
+                locationId,
+                quantity
+        );
 
-        Product product = getProductById(productId);
-        if (product.getStockQuantity() < quantity) {
-            LOGGER.warn("Stock deduction rejected. Insufficient inventory for ProductID: " +
-                            "{} ({}) | Available: {} | Requested: {}",
-                    productId, product.getName(), product.getStockQuantity(), quantity);
-            throw new InsufficientStockException("Insufficient stock for product: " + product.getName());
+        if (quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero"
+            );
         }
 
-        int oldStock = product.getStockQuantity();
-        int newStock = oldStock - quantity;
+        Product product = getProductById(productId);
 
-        product.setStockQuantity(newStock);
-        productRepository.save(product);
-        LOGGER.info("Stock deducted successfully. ProductID: {} ({}) | Deducted: {} | Prev Stock: {} | New Stock: {}",
-                productId, product.getName(), quantity, oldStock, newStock);
+        Inventory inventory = inventoryRepository
+                .findByProductIdAndLocationId(productId, locationId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Inventory not found for product "
+                                        + productId
+                                        + " at location "
+                                        + locationId
+                        )
+                );
+
+        int availableStock = inventory.getAvailableQuantity();
+
+        if (availableStock < quantity) {
+            throw new InsufficientStockException(
+                    "Insufficient stock for product: "
+                            + product.getName()
+                            + " at the selected location"
+            );
+        }
+
+        inventory.setQuantity(
+                inventory.getQuantity() - quantity
+        );
+
+        LOGGER.info(
+                "Stock deducted successfully. ProductID: {} | LocationID: {} | Quantity: {}",
+                productId,
+                locationId,
+                quantity
+        );
     }
 
 }

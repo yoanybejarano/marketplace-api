@@ -19,10 +19,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import io.hatefulbug.marketplaceapi.dto.CustomerDto;
 import io.hatefulbug.marketplaceapi.dto.OrderDto;
-import io.hatefulbug.marketplaceapi.dto.OrderStatus;
 import io.hatefulbug.marketplaceapi.entity.Category;
 import io.hatefulbug.marketplaceapi.entity.Order;
 import io.hatefulbug.marketplaceapi.entity.Product;
+import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
@@ -84,8 +84,8 @@ class OrderServiceTest {
         @DisplayName("Should successfully place an order and correctly calculate total amount")
         void placeOrder_Success() {
             // Given
-            OrderItemRequest item1 = new OrderItemRequest(101, 2); // 2 * 25.00 = 50.00
-            OrderItemRequest item2 = new OrderItemRequest(102, 1); // 1 * 15.50 = 15.50
+            OrderItemRequest item1 = new OrderItemRequest(101, 201, 2); // 2 * 25.00 = 50.00
+            OrderItemRequest item2 = new OrderItemRequest(102, 202, 1); // 1 * 15.50 = 15.50
             OrderRequest orderRequest = new OrderRequest(1, List.of(item1, item2));
 
             when(customerService.getCustomerById(1)).thenReturn(sampleCustomerDto);
@@ -113,9 +113,9 @@ class OrderServiceTest {
             // Then
             verify(customerService).getCustomerById(1);
             verify(productService).getProductById(101);
-            verify(productService).deductStock(101, 2);
+            verify(productService).deductStock(101, 201, 2);
             verify(productService).getProductById(102);
-            verify(productService).deductStock(102, 1);
+            verify(productService).deductStock(102, 202, 1);
 
             // Verify order details passed to the repository
             verify(orderRepository).save(orderCaptor.capture());
@@ -134,7 +134,7 @@ class OrderServiceTest {
         @DisplayName("Should throw ResourceNotFoundException when customer is not found")
         void placeOrder_CustomerNotFound_ThrowsException() {
             // Given
-            OrderRequest orderRequest = new OrderRequest(99, List.of(new OrderItemRequest(101, 1)));
+            OrderRequest orderRequest = new OrderRequest(99, List.of(new OrderItemRequest(101, 201, 1)));
             when(customerService.getCustomerById(99))
                     .thenThrow(new ResourceNotFoundException("Customer not found with id: 99"));
 
@@ -151,13 +151,15 @@ class OrderServiceTest {
         @DisplayName("Should stop and throw exception when stock deduction fails")
         void placeOrder_InsufficientStock_ThrowsException() {
             // Given
-            OrderItemRequest item = new OrderItemRequest(101, 100);
+            OrderItemRequest item = new OrderItemRequest(101, 201, 100);
             OrderRequest orderRequest = new OrderRequest(1, List.of(item));
 
             when(customerService.getCustomerById(1)).thenReturn(sampleCustomerDto);
             when(productService.getProductById(101)).thenReturn(sampleProduct1);
+
+            // Fixed: Updated locationId from 202 to 201 to match the request
             doThrow(new IllegalArgumentException("Insufficient stock"))
-                    .when(productService).deductStock(101, 100);
+                    .when(productService).deductStock(101, 201, 100);
 
             // When / Then
             assertThatThrownBy(() -> orderService.placeOrder(orderRequest))
