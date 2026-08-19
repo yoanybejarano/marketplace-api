@@ -17,11 +17,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import org.hibernate.annotations.ColumnDefault;
-
-import io.hatefulbug.marketplaceapi.dto.OrderStatus;
+import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -40,19 +39,49 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
-    @Column(name = "order_date")
+    @Column(
+            name = "order_date",
+            nullable = false,
+            updatable = false
+    )
     private Instant orderDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
+    @Column(
+            name = "status",
+            nullable = false,
+            length = 30
+    )
     private OrderStatus status;
 
-    @ColumnDefault("0")
-    @Column(name = "total_amount", precision = 10, scale = 2)
+    @Column(
+            name = "total_amount",
+            nullable = false,
+            precision = 10,
+            scale = 2
+    )
     private BigDecimal totalAmount;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+            mappedBy = "order",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<OrderItem> orderItems = new ArrayList<>();
 
+    @PrePersist
+    protected void onCreate() {
+        if (orderDate == null) {
+            orderDate = Instant.now();
+        }
+
+        if (status == null) {
+            status = OrderStatus.PENDING;
+        }
+
+        if (totalAmount == null) {
+            totalAmount = BigDecimal.ZERO;
+        }
+    }
 }
+

@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Component;
 
+import io.hatefulbug.marketplaceapi.enums.PaymentStatus;
+
 @Component
 public class FakePaymentGateway implements PaymentGateway {
 

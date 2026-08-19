@@ -32,6 +32,7 @@ jobs:
           mvn -B checkstyle:check
           mvn -B pmd:check
 
+
   security:
     name: Security Scans
     runs-on: ubuntu-latest
@@ -50,10 +51,26 @@ jobs:
       - name: Run SpotBugs
         run: mvn -B spotbugs:check
 
+
   test:
     name: Unit & Integration Tests
     needs: [ lint, security ]
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: marketplace
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d marketplace"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout Repository
@@ -68,6 +85,10 @@ jobs:
 
       - name: Run Tests + Coverage
         run: mvn -B clean verify
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/marketplace
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v4
@@ -80,6 +101,7 @@ jobs:
         with:
           name: surefire-reports
           path: target/surefire-reports/
+
 
   package:
     name: Package Application

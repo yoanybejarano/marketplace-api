@@ -7,15 +7,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.hatefulbug.marketplaceapi.dto.OrderStatus;
 import io.hatefulbug.marketplaceapi.dto.PaymentDto;
 import io.hatefulbug.marketplaceapi.entity.Order;
 import io.hatefulbug.marketplaceapi.entity.Payment;
+import io.hatefulbug.marketplaceapi.enums.OrderStatus;
+import io.hatefulbug.marketplaceapi.enums.PaymentStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.payment.PaymentGateway;
 import io.hatefulbug.marketplaceapi.payment.PaymentRequest;
 import io.hatefulbug.marketplaceapi.payment.PaymentResponse;
-import io.hatefulbug.marketplaceapi.payment.PaymentStatus;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.repository.PaymentRepository;
 import io.hatefulbug.marketplaceapi.util.ConverterUtil;

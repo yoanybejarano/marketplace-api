@@ -1,5 +1,6 @@
 package io.hatefulbug.marketplaceapi.payment;
 
+import io.hatefulbug.marketplaceapi.enums.PaymentStatus;
 import lombok.Data;
 
 @Data
