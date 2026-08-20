@@ -2,16 +2,24 @@ package io.hatefulbug.marketplaceapi.dto;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
-public record ProductDto(
-        Integer id,
-        CategoryDto category,
-        String name,
-        String description,
-        BigDecimal price,
-        Integer stockQuantity,
-        String sku,
-        String imageUrl,
-        Instant createdAt
-) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductDto {
+    private Integer id;
+    private CategoryDto category;
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private String sku;
+    private String imageUrl;
+    private List<InventoryDto> inventories;
+    private Instant createdAt;
+    private int stockQuantity;
 }

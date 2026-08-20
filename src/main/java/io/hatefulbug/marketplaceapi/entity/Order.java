@@ -20,6 +20,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import lombok.Getter;
 import lombok.Setter;
@@ -67,6 +69,7 @@ public class Order {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @JsonManagedReference
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @PrePersist

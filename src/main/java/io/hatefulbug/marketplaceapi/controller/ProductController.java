@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.hatefulbug.marketplaceapi.dto.ProductDto;
 import io.hatefulbug.marketplaceapi.request.PageResponse;
 import io.hatefulbug.marketplaceapi.service.ProductService;
-import io.hatefulbug.marketplaceapi.util.ConverterUtil;
+import io.hatefulbug.marketplaceapi.util.DtoMapperUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -53,7 +53,7 @@ public class ProductController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> getProductById(@PathVariable Integer id) {
-        ProductDto product = ConverterUtil.toProductDto(productService.getProductById(id));
+        ProductDto product = DtoMapperUtil.toProductDto(productService.getProductById(id));
         return ResponseEntity.ok(product);
     }
 

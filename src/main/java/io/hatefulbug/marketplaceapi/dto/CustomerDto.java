@@ -2,12 +2,18 @@ package io.hatefulbug.marketplaceapi.dto;
 
 import java.time.Instant;
 
-public record CustomerDto(
-        Integer id,
-        String firstName,
-        String lastName,
-        String email,
-        String phone,
-        Instant createdAt
-) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CustomerDto {
+    private Integer id;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private String phone;
+    private Instant createdAt;
 }

@@ -18,7 +18,7 @@ import io.hatefulbug.marketplaceapi.payment.PaymentRequest;
 import io.hatefulbug.marketplaceapi.payment.PaymentResponse;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.repository.PaymentRepository;
-import io.hatefulbug.marketplaceapi.util.ConverterUtil;
+import io.hatefulbug.marketplaceapi.util.DtoMapperUtil;
 
 @Service
 @Transactional
@@ -129,7 +129,7 @@ public class PaymentService {
 
         Payment paymentResult = paymentRepository.save(payment);
         LOGGER.debug("Payment entity persisted successfully. PaymentID: {}", paymentResult.getId());
-        return ConverterUtil.toPaymentDto(paymentResult);
+        return DtoMapperUtil.toPaymentDto(paymentResult);
     }
 
     public PaymentDto getPayment(Integer paymentId) {
@@ -139,7 +139,7 @@ public class PaymentService {
                     LOGGER.warn("Fetch failed. Payment record not found for PaymentID: {}", paymentId);
                     return new ResourceNotFoundException("Payment not found");
                 });
-        return ConverterUtil.toPaymentDto(payment);
+        return DtoMapperUtil.toPaymentDto(payment);
     }
 
     public PaymentDto refund(Integer paymentId) {
@@ -161,7 +161,7 @@ public class PaymentService {
         Payment savedPayment = paymentRepository.save(payment);
         LOGGER.info("Refund processed successfully. TransactionID: {} | OrderID: {} | PaymentID: {}",
                 transactionId, orderId, savedPayment.getId());
-        return ConverterUtil.toPaymentDto(savedPayment);
+        return DtoMapperUtil.toPaymentDto(savedPayment);
     }
 
     public PaymentDto cancelPayment(Integer paymentId) {
@@ -184,6 +184,6 @@ public class PaymentService {
 
         LOGGER.info("Payment cancelled successfully. TransactionID: {} | OrderID: {} | PaymentID: {}",
                 transactionId, orderId, savedPayment.getId());
-        return ConverterUtil.toPaymentDto(savedPayment);
+        return DtoMapperUtil.toPaymentDto(savedPayment);
     }
 }

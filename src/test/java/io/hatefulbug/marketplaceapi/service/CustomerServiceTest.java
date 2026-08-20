@@ -57,12 +57,12 @@ class CustomerServiceTest {
 
         // Then
         assertThat(result).isNotNull();
-        assertThat(result.id()).isEqualTo(sampleCustomer.getId());
-        assertThat(result.firstName()).isEqualTo(sampleCustomer.getFirstName());
-        assertThat(result.lastName()).isEqualTo(sampleCustomer.getLastName());
-        assertThat(result.email()).isEqualTo(sampleCustomer.getEmail());
-        assertThat(result.phone()).isEqualTo(sampleCustomer.getPhone());
-        assertThat(result.createdAt()).isEqualTo(sampleCustomer.getCreatedAt());
+        assertThat(result.getId()).isEqualTo(sampleCustomer.getId());
+        assertThat(result.getFirstName()).isEqualTo(sampleCustomer.getFirstName());
+        assertThat(result.getLastName()).isEqualTo(sampleCustomer.getLastName());
+        assertThat(result.getEmail()).isEqualTo(sampleCustomer.getEmail());
+        assertThat(result.getPhone()).isEqualTo(sampleCustomer.getPhone());
+        assertThat(result.getCreatedAt()).isEqualTo(sampleCustomer.getCreatedAt());
 
         verify(customerRepository).findById(customerId);
         verifyNoMoreInteractions(customerRepository);

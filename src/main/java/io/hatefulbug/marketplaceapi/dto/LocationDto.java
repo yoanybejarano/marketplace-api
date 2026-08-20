@@ -1,5 +1,8 @@
 package io.hatefulbug.marketplaceapi.dto;
 
+import java.time.Instant;
+
+import io.hatefulbug.marketplaceapi.enums.LocationType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,13 +10,17 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AddressDto {
+public class LocationDto {
     private Integer id;
-    private CustomerDto customer;
-    private String street;
+    private String name;
+    private String code;
+    private LocationType type;
+    private String address;
     private String city;
     private String state;
     private String zipCode;
     private String country;
-    private Boolean isDefault;
+    private boolean active;
+    private Instant createdAt;
 }
+

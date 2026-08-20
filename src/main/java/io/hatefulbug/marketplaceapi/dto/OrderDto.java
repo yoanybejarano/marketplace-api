@@ -4,18 +4,18 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-public record OrderDto(
-        Integer id,
-        CustomerDto customer,
-        Instant orderDate,
-        String status,
-        BigDecimal totalAmount,
-        List<OrderItemDto> orderItems
-) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-    public OrderDto {
-        orderItems = orderItems == null
-                ? List.of()
-                : List.copyOf(orderItems);
-    }
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class OrderDto {
+    private Integer id;
+    private CustomerDto customer;
+    private Instant orderDate;
+    private String status;
+    private BigDecimal totalAmount;
+    private List<OrderItemDto> orderItems;
 }

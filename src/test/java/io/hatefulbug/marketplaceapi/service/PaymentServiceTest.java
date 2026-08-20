@@ -14,7 +14,13 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.annotation.Import;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import io.hatefulbug.marketplaceapi.configuration.JacksonConfig;
 import io.hatefulbug.marketplaceapi.dto.PaymentDto;
 import io.hatefulbug.marketplaceapi.entity.Customer;
 import io.hatefulbug.marketplaceapi.entity.Order;
@@ -38,6 +44,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@Import(JacksonConfig.class)
 class PaymentServiceTest {
 
     @Mock
@@ -63,8 +70,15 @@ class PaymentServiceTest {
 
     private Order sampleOrder;
 
+    private ObjectMapper mapper;
+
     @BeforeEach
     void setUp() {
+
+        mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         Customer sampleCustomer = new Customer();
         sampleCustomer.setId(10);
 

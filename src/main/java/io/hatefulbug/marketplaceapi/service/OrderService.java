@@ -21,7 +21,7 @@ import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
 import io.hatefulbug.marketplaceapi.request.OrderRequest;
-import io.hatefulbug.marketplaceapi.util.ConverterUtil;
+import io.hatefulbug.marketplaceapi.util.DtoMapperUtil;
 
 @Service
 public class OrderService {
@@ -43,11 +43,11 @@ public class OrderService {
     public OrderDto placeOrder(OrderRequest orderRequest) {
         CustomerDto customerDto = customerService.getCustomerById(orderRequest.customerId());
         Customer customer = Customer.builder()
-                .id(customerDto.id())
-                .firstName(customerDto.firstName())
-                .lastName(customerDto.lastName())
-                .email(customerDto.email())
-                .phone(customerDto.phone())
+                .id(customerDto.getId())
+                .firstName(customerDto.getFirstName())
+                .lastName(customerDto.getLastName())
+                .email(customerDto.getEmail())
+                .phone(customerDto.getPhone())
                 .createdAt(Instant.now()).build();
 
         Order order = new Order();
@@ -80,7 +80,7 @@ public class OrderService {
 
         Order orderResult = orderRepository.save(order);
         LOGGER.info("Order ID: {} placed successfully", orderResult.getId());
-        return ConverterUtil.toOrderDto(orderResult);
+        return DtoMapperUtil.toOrderDto(orderResult);
     }
 
     @Transactional
