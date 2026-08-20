@@ -1,8 +1,14 @@
 package io.hatefulbug.marketplaceapi.dto;
 
-public record CategoryDto(
-        Integer id,
-        String name,
-        String description
-) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CategoryDto {
+    private Integer id;
+    private String name;
+    private String description;
 }

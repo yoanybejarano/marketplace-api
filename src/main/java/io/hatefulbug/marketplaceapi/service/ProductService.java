@@ -15,7 +15,7 @@ import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.repository.InventoryRepository;
 import io.hatefulbug.marketplaceapi.repository.ProductRepository;
 import io.hatefulbug.marketplaceapi.request.PageResponse;
-import io.hatefulbug.marketplaceapi.util.ConverterUtil;
+import io.hatefulbug.marketplaceapi.util.DtoMapperUtil;
 import io.hatefulbug.marketplaceapi.util.PageUtil;
 
 @Service
@@ -33,13 +33,13 @@ public class ProductService {
 
     public PageResponse<ProductDto> getAllProducts(int page, int size) {
         Page<Product> pageResult = productRepository.findAll(PageRequest.of(page, size));
-        Page<ProductDto> dtoPage = pageResult.map(ConverterUtil::toProductDto);
+        Page<ProductDto> dtoPage = pageResult.map(DtoMapperUtil::toProductDto);
         return PageUtil.getPage(dtoPage);
     }
 
     public PageResponse<ProductDto> getProductsByCategory(Integer categoryId, int page, int size) {
         Page<Product> pageResult = productRepository.findByCategoryId(categoryId, PageRequest.of(page, size));
-        Page<ProductDto> dtoPage = pageResult.map(ConverterUtil::toProductDto);
+        Page<ProductDto> dtoPage = pageResult.map(DtoMapperUtil::toProductDto);
         return PageUtil.getPage(dtoPage);
     }
 
