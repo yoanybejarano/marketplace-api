@@ -18,6 +18,7 @@ import io.hatefulbug.marketplaceapi.entity.OrderItem;
 import io.hatefulbug.marketplaceapi.entity.Product;
 import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
+import io.hatefulbug.marketplaceapi.metric.OrderMetrics;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
 import io.hatefulbug.marketplaceapi.request.OrderRequest;
@@ -30,13 +31,18 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CustomerService customerService;
     private final ProductService productService;
+    private final OrderMetrics orderMetrics;
 
-    public OrderService(OrderRepository orderRepository,
-                        CustomerService customerService,
-                        ProductService productService) {
+    public OrderService(
+            OrderRepository orderRepository,
+            CustomerService customerService,
+            ProductService productService,
+            OrderMetrics orderMetrics
+    ) {
         this.orderRepository = orderRepository;
         this.customerService = customerService;
         this.productService = productService;
+        this.orderMetrics = orderMetrics;
     }
 
     @Transactional
@@ -48,7 +54,8 @@ public class OrderService {
                 .lastName(customerDto.getLastName())
                 .email(customerDto.getEmail())
                 .phone(customerDto.getPhone())
-                .createdAt(Instant.now()).build();
+                .createdAt(Instant.now())
+                .build();
 
         Order order = new Order();
         order.setCustomer(customer);
@@ -79,6 +86,7 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
 
         Order orderResult = orderRepository.save(order);
+        orderMetrics.recordOnlineOrderCreated();
         LOGGER.info("Order ID: {} placed successfully", orderResult.getId());
         return DtoMapperUtil.toOrderDto(orderResult);
     }

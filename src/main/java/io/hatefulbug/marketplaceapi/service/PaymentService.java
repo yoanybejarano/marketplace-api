@@ -13,6 +13,7 @@ import io.hatefulbug.marketplaceapi.entity.Payment;
 import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import io.hatefulbug.marketplaceapi.enums.PaymentStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
+import io.hatefulbug.marketplaceapi.metric.PaymentMetrics;
 import io.hatefulbug.marketplaceapi.payment.PaymentGateway;
 import io.hatefulbug.marketplaceapi.payment.PaymentRequest;
 import io.hatefulbug.marketplaceapi.payment.PaymentResponse;
@@ -29,107 +30,118 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final PaymentGateway paymentGateway;
+    private final PaymentMetrics paymentMetrics;
 
     public PaymentService(
             PaymentRepository paymentRepository,
             OrderRepository orderRepository,
             OrderService orderService,
-            PaymentGateway paymentGateway) {
+            PaymentGateway paymentGateway,
+            PaymentMetrics paymentMetrics) {
 
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
         this.orderService = orderService;
         this.paymentGateway = paymentGateway;
+        this.paymentMetrics = paymentMetrics;
     }
 
     public PaymentDto processPayment(PaymentRequest request) {
-        LOGGER.info("Processing payment request for OrderID: {} | Method: {}",
-                request.getOrderId(), request.getPaymentMethod());
+        return paymentMetrics.recordPaymentProcessing(() -> {
+            LOGGER.info("Processing payment request for OrderID: {} | Method: {}",
+                    request.getOrderId(), request.getPaymentMethod());
 
-        Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> {
-                    LOGGER.warn("Payment processing aborted. Order not found for OrderID: {}", request.getOrderId());
-                    return new ResourceNotFoundException("Order not found");
-                });
+            Order order = orderRepository.findById(request.getOrderId())
+                    .orElseThrow(() -> {
+                        LOGGER.warn("Payment processing aborted. Order not found for OrderID: {}",
+                                request.getOrderId());
+                        paymentMetrics.recordPaymentStatus("ABORTED", request.getPaymentMethod().toString());
+                        return new ResourceNotFoundException("Order not found");
+                    });
 
-        Payment payment = new Payment();
-        payment.setOrder(order);
-        payment.setPaymentMethod(request.getPaymentMethod());
-        payment.setPaymentDate(Instant.now());
+            Payment payment = new Payment();
+            payment.setOrder(order);
+            payment.setPaymentMethod(request.getPaymentMethod());
+            payment.setPaymentDate(Instant.now());
 
-        PaymentRequest gatewayRequest = new PaymentRequest(
-                order.getTotalAmount(),
-                "USD",
-                request.getPaymentMethod(),
-                order.getCustomer().getId(),
-                order.getId()
-        );
+            PaymentRequest gatewayRequest = new PaymentRequest(
+                    order.getTotalAmount(),
+                    "USD",
+                    request.getPaymentMethod(),
+                    order.getCustomer().getId(),
+                    order.getId()
+            );
 
-        LOGGER.debug("Sending authorization request to gateway for OrderID: {} | Amount: USD {}",
-                order.getId(), order.getTotalAmount());
+            LOGGER.debug("Sending authorization request to gateway for OrderID: {} | Amount: USD {}",
+                    order.getId(), order.getTotalAmount());
 
-        PaymentResponse response = paymentGateway.authorize(gatewayRequest);
-        payment.setTransactionId(response.getPaymentId());
-        LOGGER.info("Gateway auth response received. OrderID: {} | Status: {} | TransactionID: {}",
-                order.getId(), response.getStatus(), response.getPaymentId());
+            PaymentResponse response = paymentGateway.authorize(gatewayRequest);
+            payment.setTransactionId(response.getPaymentId());
+            LOGGER.info("Gateway auth response received. OrderID: {} | Status: {} | TransactionID: {}",
+                    order.getId(), response.getStatus(), response.getPaymentId());
 
-        switch (response.getStatus()) {
+            switch (response.getStatus()) {
 
-            case AUTHORIZED -> {
-                LOGGER.debug("Attempting to capture payment for TransactionID: {}", response.getPaymentId());
-                PaymentResponse captureResponse = paymentGateway.capture(response.getPaymentId());
+                case AUTHORIZED -> {
+                    LOGGER.debug("Attempting to capture payment for TransactionID: {}", response.getPaymentId());
+                    PaymentResponse captureResponse = paymentGateway.capture(response.getPaymentId());
 
-                payment.setPaymentStatus(PaymentStatus.CAPTURED);
-                orderService.updateOrderStatus(order.getId(), OrderStatus.PAID);
-                payment.setGatewayMessage(captureResponse.getMessage());
-                LOGGER.info("Payment successfully captured. TransactionID: {} | OrderID: {} | Amount: USD {}",
-                        response.getPaymentId(), order.getId(), order.getTotalAmount());
+                    payment.setPaymentStatus(PaymentStatus.CAPTURED);
+                    orderService.updateOrderStatus(order.getId(), OrderStatus.PAID);
+                    payment.setGatewayMessage(captureResponse.getMessage());
+                    LOGGER.info("Payment successfully captured. TransactionID: {} | OrderID: {} | Amount: USD {}",
+                            response.getPaymentId(), order.getId(), order.getTotalAmount());
+                }
+
+                case PENDING -> {
+                    payment.setPaymentStatus(PaymentStatus.PENDING);
+                    orderService.updateOrderStatus(order.getId(), OrderStatus.PROCESSING);
+                    payment.setGatewayMessage(response.getMessage());
+                    LOGGER.info("Payment is pending external completion. OrderID: {} | TransactionID: {}",
+                            order.getId(), response.getPaymentId());
+                }
+
+                case DECLINED -> {
+                    payment.setPaymentStatus(PaymentStatus.DECLINED);
+                    orderService.updateOrderStatus(order.getId(), OrderStatus.FAILED);
+                    payment.setGatewayMessage(response.getMessage());
+                    LOGGER.warn("Payment declined by gateway. OrderID: {} | TransactionID: {} | Reason: {}",
+                            order.getId(), response.getPaymentId(), response.getMessage());
+                }
+
+                case FAILED -> {
+                    payment.setPaymentStatus(PaymentStatus.FAILED);
+                    orderService.updateOrderStatus(order.getId(), OrderStatus.FAILED);
+                    payment.setGatewayMessage(response.getMessage());
+                    LOGGER.error("Payment processing failed at gateway. OrderID: {} | TransactionID: {} | Error: {}",
+                            order.getId(), response.getPaymentId(), response.getMessage());
+                }
+
+                case CANCELLED -> {
+                    payment.setPaymentStatus(PaymentStatus.CANCELLED);
+                    orderService.updateOrderStatus(order.getId(), OrderStatus.CANCELLED);
+                    payment.setGatewayMessage(response.getMessage());
+                    LOGGER.info("Payment cancelled. OrderID: {} | TransactionID: {}",
+                            order.getId(), response.getPaymentId());
+                }
+
+                default -> {
+                    payment.setPaymentStatus(PaymentStatus.FAILED);
+                    orderService.updateOrderStatus(order.getId(), OrderStatus.FAILED);
+                    payment.setGatewayMessage("Unknown payment status");
+                    LOGGER.error("Unexpected payment status encountered from gateway. OrderID: {} | Status: {}",
+                            order.getId(), response.getStatus());
+                }
             }
 
-            case PENDING -> {
-                payment.setPaymentStatus(PaymentStatus.PENDING);
-                orderService.updateOrderStatus(order.getId(), OrderStatus.PROCESSING);
-                payment.setGatewayMessage(response.getMessage());
-                LOGGER.info("Payment is pending external completion. OrderID: {} | TransactionID: {}",
-                        order.getId(), response.getPaymentId());
-            }
+            // Track outcome with tags for status and payment method
+            paymentMetrics.recordPaymentStatus(payment.getPaymentStatus().name(),
+                    request.getPaymentMethod().toString());
 
-            case DECLINED -> {
-                payment.setPaymentStatus(PaymentStatus.DECLINED);
-                orderService.updateOrderStatus(order.getId(), OrderStatus.FAILED);
-                payment.setGatewayMessage(response.getMessage());
-                LOGGER.warn("Payment declined by gateway. OrderID: {} | TransactionID: {} | Reason: {}",
-                        order.getId(), response.getPaymentId(), response.getMessage());
-            }
-
-            case FAILED -> {
-                payment.setPaymentStatus(PaymentStatus.FAILED);
-                orderService.updateOrderStatus(order.getId(), OrderStatus.FAILED);
-                payment.setGatewayMessage(response.getMessage());
-                LOGGER.error("Payment processing failed at gateway. OrderID: {} | TransactionID: {} | Error: {}",
-                        order.getId(), response.getPaymentId(), response.getMessage());
-            }
-
-            case CANCELLED -> {
-                payment.setPaymentStatus(PaymentStatus.CANCELLED);
-                orderService.updateOrderStatus(order.getId(), OrderStatus.CANCELLED);
-                payment.setGatewayMessage(response.getMessage());
-                LOGGER.info("Payment cancelled. OrderID: {} | TransactionID: {}",
-                        order.getId(), response.getPaymentId());
-            }
-
-            default -> {
-                payment.setPaymentStatus(PaymentStatus.FAILED);
-                orderService.updateOrderStatus(order.getId(), OrderStatus.FAILED);
-                payment.setGatewayMessage("Unknown payment status");
-                LOGGER.error("Unexpected payment status encountered from gateway. OrderID: {} | Status: {}",
-                        order.getId(), response.getStatus());
-            }
-        }
-
-        Payment paymentResult = paymentRepository.save(payment);
-        LOGGER.debug("Payment entity persisted successfully. PaymentID: {}", paymentResult.getId());
-        return DtoMapperUtil.toPaymentDto(paymentResult);
+            Payment paymentResult = paymentRepository.save(payment);
+            LOGGER.debug("Payment entity persisted successfully. PaymentID: {}", paymentResult.getId());
+            return DtoMapperUtil.toPaymentDto(paymentResult);
+        });
     }
 
     public PaymentDto getPayment(Integer paymentId) {
@@ -159,6 +171,9 @@ public class PaymentService {
         orderService.updateOrderStatus(orderId, OrderStatus.REFUNDED);
 
         Payment savedPayment = paymentRepository.save(payment);
+
+        paymentMetrics.recordRefund();
+
         LOGGER.info("Refund processed successfully. TransactionID: {} | OrderID: {} | PaymentID: {}",
                 transactionId, orderId, savedPayment.getId());
         return DtoMapperUtil.toPaymentDto(savedPayment);
@@ -181,6 +196,8 @@ public class PaymentService {
         payment.setPaymentStatus(PaymentStatus.CANCELLED);
         orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
         Payment savedPayment = paymentRepository.save(payment);
+
+        paymentMetrics.recordCancellation();
 
         LOGGER.info("Payment cancelled successfully. TransactionID: {} | OrderID: {} | PaymentID: {}",
                 transactionId, orderId, savedPayment.getId());
