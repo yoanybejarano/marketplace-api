@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -25,9 +24,11 @@ import io.hatefulbug.marketplaceapi.entity.Inventory;
 import io.hatefulbug.marketplaceapi.entity.Product;
 import io.hatefulbug.marketplaceapi.exception.InsufficientStockException;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
+import io.hatefulbug.marketplaceapi.metric.ProductMetrics;
 import io.hatefulbug.marketplaceapi.repository.InventoryRepository;
 import io.hatefulbug.marketplaceapi.repository.ProductRepository;
 import io.hatefulbug.marketplaceapi.request.PageResponse;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -45,11 +46,12 @@ class ProductServiceTest {
     @Mock
     private InventoryRepository inventoryRepository;
 
-    @InjectMocks
-    private ProductService productService;
-
     @Captor
     private ArgumentCaptor<Inventory> inventoryCaptor;
+
+    private ProductService productService;
+    private SimpleMeterRegistry meterRegistry;
+    private ProductMetrics productMetrics;
 
     private Product sampleProduct;
     private Category category;
@@ -57,6 +59,15 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        productMetrics = new ProductMetrics(meterRegistry);
+
+        productService = new ProductService(
+                productRepository,
+                inventoryRepository,
+                productMetrics
+        );
+
         category = new Category();
         category.setId(1);
         category.setName("Electronics");
@@ -85,17 +96,30 @@ class ProductServiceTest {
             int page = 0;
             int size = 10;
             PageRequest pageRequest = PageRequest.of(page, size);
-            Page<Product> productPage = new PageImpl<>(List.of(sampleProduct), pageRequest, 1);
 
-            when(productRepository.findAll(pageRequest)).thenReturn(productPage);
+            Page<Product> productPage = new PageImpl<>(
+                    List.of(sampleProduct),
+                    pageRequest,
+                    1
+            );
+
+            when(productRepository.findAll(pageRequest))
+                    .thenReturn(productPage);
 
             // When
-            PageResponse<ProductDto> result = productService.getAllProducts(page, size);
+            PageResponse<ProductDto> result =
+                    productService.getAllProducts(page, size);
 
             // Then
             assertThat(result).isNotNull();
+
             verify(productRepository).findAll(pageRequest);
             verifyNoMoreInteractions(productRepository);
+
+            assertThat(meterRegistry.get("product.catalog.get_all.time")
+                    .timer()
+                    .count())
+                    .isEqualTo(1);
         }
     }
 
@@ -110,18 +134,39 @@ class ProductServiceTest {
             Integer categoryId = 5;
             int page = 0;
             int size = 10;
-            PageRequest pageRequest = PageRequest.of(page, size);
-            Page<Product> productPage = new PageImpl<>(List.of(sampleProduct), pageRequest, 1);
 
-            when(productRepository.findByCategoryId(categoryId, pageRequest)).thenReturn(productPage);
+            PageRequest pageRequest = PageRequest.of(page, size);
+
+            Page<Product> productPage = new PageImpl<>(
+                    List.of(sampleProduct),
+                    pageRequest,
+                    1
+            );
+
+            when(productRepository.findByCategoryId(categoryId, pageRequest))
+                    .thenReturn(productPage);
 
             // When
-            PageResponse<ProductDto> result = productService.getProductsByCategory(categoryId, page, size);
+            PageResponse<ProductDto> result =
+                    productService.getProductsByCategory(
+                            categoryId,
+                            page,
+                            size
+                    );
 
             // Then
             assertThat(result).isNotNull();
-            verify(productRepository).findByCategoryId(categoryId, pageRequest);
+
+            verify(productRepository)
+                    .findByCategoryId(categoryId, pageRequest);
+
             verifyNoMoreInteractions(productRepository);
+
+            assertThat(meterRegistry.get(
+                            "product.catalog.get_by_category.time")
+                    .timer()
+                    .count())
+                    .isEqualTo(1);
         }
     }
 
@@ -134,7 +179,9 @@ class ProductServiceTest {
         void getProductById_WhenProductExists_ReturnsProduct() {
             // Given
             Integer productId = 101;
-            when(productRepository.findById(productId)).thenReturn(Optional.of(sampleProduct));
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(sampleProduct));
 
             // When
             Product result = productService.getProductById(productId);
@@ -153,12 +200,17 @@ class ProductServiceTest {
         void getProductById_WhenProductDoesNotExist_ThrowsException() {
             // Given
             Integer productId = 999;
-            when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.empty());
 
             // When / Then
-            assertThatThrownBy(() -> productService.getProductById(productId))
+            assertThatThrownBy(() ->
+                    productService.getProductById(productId))
                     .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("Product not found with id: " + productId);
+                    .hasMessage(
+                            "Product not found with id: " + productId
+                    );
 
             verify(productRepository).findById(productId);
             verifyNoMoreInteractions(productRepository);
@@ -177,17 +229,44 @@ class ProductServiceTest {
             Integer locationId = 201;
             int deductQuantity = 20;
 
-            when(productRepository.findById(productId)).thenReturn(Optional.of(sampleProduct));
-            when(inventoryRepository.findByProductIdAndLocationId(productId, locationId))
-                    .thenReturn(Optional.of(sampleInventory));
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(sampleProduct));
+
+            when(inventoryRepository.findByProductIdAndLocationId(
+                    productId,
+                    locationId
+            )).thenReturn(Optional.of(sampleInventory));
 
             // When
-            productService.deductStock(productId, locationId, deductQuantity);
+            productService.deductStock(
+                    productId,
+                    locationId,
+                    deductQuantity
+            );
 
             // Then
             verify(productRepository).findById(productId);
-            verify(inventoryRepository).findByProductIdAndLocationId(productId, locationId);
-            assertThat(sampleInventory.getQuantity()).isEqualTo(30);
+
+            verify(inventoryRepository)
+                    .findByProductIdAndLocationId(
+                            productId,
+                            locationId
+                    );
+
+            assertThat(sampleInventory.getQuantity())
+                    .isEqualTo(30);
+
+            assertThat(meterRegistry.get(
+                            "product.stock.deductions.success")
+                    .counter()
+                    .count())
+                    .isEqualTo(1);
+
+            assertThat(meterRegistry.get(
+                            "product.stock.deduct.time")
+                    .timer()
+                    .count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -198,15 +277,29 @@ class ProductServiceTest {
             Integer locationId = 201;
             int deductQuantity = 50;
 
-            when(productRepository.findById(productId)).thenReturn(Optional.of(sampleProduct));
-            when(inventoryRepository.findByProductIdAndLocationId(productId, locationId))
-                    .thenReturn(Optional.of(sampleInventory));
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(sampleProduct));
+
+            when(inventoryRepository.findByProductIdAndLocationId(
+                    productId,
+                    locationId
+            )).thenReturn(Optional.of(sampleInventory));
 
             // When
-            productService.deductStock(productId, locationId, deductQuantity);
+            productService.deductStock(
+                    productId,
+                    locationId,
+                    deductQuantity
+            );
 
             // Then
             assertThat(sampleInventory.getQuantity()).isZero();
+
+            assertThat(meterRegistry.get(
+                            "product.stock.deductions.success")
+                    .counter()
+                    .count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -217,12 +310,24 @@ class ProductServiceTest {
             Integer locationId = 201;
 
             // When / Then
-            assertThatThrownBy(() -> productService.deductStock(productId, locationId, 0))
+            assertThatThrownBy(() ->
+                    productService.deductStock(
+                            productId,
+                            locationId,
+                            0
+                    ))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Quantity must be greater than zero");
 
             verifyNoInteractions(productRepository);
             verifyNoInteractions(inventoryRepository);
+
+            assertThat(meterRegistry.get(
+                            "product.stock.deductions.failed")
+                    .tag("reason", "INVALID_QUANTITY")
+                    .counter()
+                    .count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -233,19 +338,42 @@ class ProductServiceTest {
             Integer locationId = 201;
             int deductQuantity = 60;
 
-            when(productRepository.findById(productId)).thenReturn(Optional.of(sampleProduct));
-            when(inventoryRepository.findByProductIdAndLocationId(productId, locationId))
-                    .thenReturn(Optional.of(sampleInventory));
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(sampleProduct));
+
+            when(inventoryRepository.findByProductIdAndLocationId(
+                    productId,
+                    locationId
+            )).thenReturn(Optional.of(sampleInventory));
 
             // When / Then
-            assertThatThrownBy(() -> productService.deductStock(productId, locationId, deductQuantity))
+            assertThatThrownBy(() ->
+                    productService.deductStock(
+                            productId,
+                            locationId,
+                            deductQuantity
+                    ))
                     .isInstanceOf(InsufficientStockException.class)
                     .hasMessage(
-                            "Insufficient stock for product: " + sampleProduct.getName() + " at the selected location"
+                            "Insufficient stock for product: "
+                                    + sampleProduct.getName()
+                                    + " at the selected location"
                     );
 
             verify(productRepository).findById(productId);
-            verify(inventoryRepository).findByProductIdAndLocationId(productId, locationId);
+
+            verify(inventoryRepository)
+                    .findByProductIdAndLocationId(
+                            productId,
+                            locationId
+                    );
+
+            assertThat(meterRegistry.get(
+                            "product.stock.deductions.failed")
+                    .tag("reason", "INSUFFICIENT_STOCK")
+                    .counter()
+                    .count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -255,14 +383,35 @@ class ProductServiceTest {
             Integer productId = 101;
             Integer locationId = 201;
 
-            when(productRepository.findById(productId)).thenReturn(Optional.of(sampleProduct));
-            when(inventoryRepository.findByProductIdAndLocationId(productId, locationId))
-                    .thenReturn(Optional.empty());
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(sampleProduct));
+
+            when(inventoryRepository.findByProductIdAndLocationId(
+                    productId,
+                    locationId
+            )).thenReturn(Optional.empty());
 
             // When / Then
-            assertThatThrownBy(() -> productService.deductStock(productId, locationId, 5))
+            assertThatThrownBy(() ->
+                    productService.deductStock(
+                            productId,
+                            locationId,
+                            5
+                    ))
                     .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("Inventory not found for product " + productId + " at location " + locationId);
+                    .hasMessage(
+                            "Inventory not found for product "
+                                    + productId
+                                    + " at location "
+                                    + locationId
+                    );
+
+            assertThat(meterRegistry.get(
+                            "product.stock.deductions.failed")
+                    .tag("reason", "INVENTORY_NOT_FOUND")
+                    .counter()
+                    .count())
+                    .isEqualTo(1);
         }
 
         @Test
@@ -271,14 +420,31 @@ class ProductServiceTest {
             // Given
             Integer productId = 999;
             Integer locationId = 888;
-            when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.empty());
 
             // When / Then
-            assertThatThrownBy(() -> productService.deductStock(productId, locationId, 5))
+            assertThatThrownBy(() ->
+                    productService.deductStock(
+                            productId,
+                            locationId,
+                            5
+                    ))
                     .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessage("Product not found with id: " + productId);
+                    .hasMessage(
+                            "Product not found with id: " + productId
+                    );
 
+            verify(productRepository).findById(productId);
             verifyNoInteractions(inventoryRepository);
+
+            // No deduction-failure metric is recorded by the service
+            // for PRODUCT_NOT_FOUND.
+            assertThat(
+                    meterRegistry.find("product.stock.deductions.failed")
+                            .counter()
+            ).isNull();
         }
     }
 }

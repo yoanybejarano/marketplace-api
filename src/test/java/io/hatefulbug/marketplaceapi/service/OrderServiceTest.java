@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,9 +23,11 @@ import io.hatefulbug.marketplaceapi.entity.Order;
 import io.hatefulbug.marketplaceapi.entity.Product;
 import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
+import io.hatefulbug.marketplaceapi.metric.OrderMetrics;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
 import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
 import io.hatefulbug.marketplaceapi.request.OrderRequest;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,8 +50,9 @@ class OrderServiceTest {
     @Mock
     private ProductService productService;
 
-    @InjectMocks
     private OrderService orderService;
+    private SimpleMeterRegistry meterRegistry;
+    private OrderMetrics orderMetrics;
 
     @Captor
     private ArgumentCaptor<Order> orderCaptor;
@@ -61,8 +63,23 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        orderMetrics = new OrderMetrics(meterRegistry);
+
+        orderService = new OrderService(
+                orderRepository,
+                customerService,
+                productService,
+                orderMetrics
+        );
+
         sampleCustomerDto = new CustomerDto(
-                1, "Jane", "Doe", "jane.doe@example.com", "9876543210", Instant.now()
+                1,
+                "Jane",
+                "Doe",
+                "jane.doe@example.com",
+                "9876543210",
+                Instant.now()
         );
 
         sampleProduct1 = new Product();
@@ -84,13 +101,23 @@ class OrderServiceTest {
         @DisplayName("Should successfully place an order and correctly calculate total amount")
         void placeOrder_Success() {
             // Given
-            OrderItemRequest item1 = new OrderItemRequest(101, 201, 2); // 2 * 25.00 = 50.00
-            OrderItemRequest item2 = new OrderItemRequest(102, 202, 1); // 1 * 15.50 = 15.50
-            OrderRequest orderRequest = new OrderRequest(1, List.of(item1, item2));
+            OrderItemRequest item1 =
+                    new OrderItemRequest(101, 201, 2);
 
-            when(customerService.getCustomerById(1)).thenReturn(sampleCustomerDto);
-            when(productService.getProductById(101)).thenReturn(sampleProduct1);
-            when(productService.getProductById(102)).thenReturn(sampleProduct2);
+            OrderItemRequest item2 =
+                    new OrderItemRequest(102, 202, 1);
+
+            OrderRequest orderRequest =
+                    new OrderRequest(1, List.of(item1, item2));
+
+            when(customerService.getCustomerById(1))
+                    .thenReturn(sampleCustomerDto);
+
+            when(productService.getProductById(101))
+                    .thenReturn(sampleProduct1);
+
+            when(productService.getProductById(102))
+                    .thenReturn(sampleProduct2);
 
             Category category = new Category();
             category.setId(1);
@@ -100,73 +127,123 @@ class OrderServiceTest {
             sampleProduct1.setCategory(category);
             sampleProduct2.setCategory(category);
 
-            // Mock saving the order and assigning an ID
-            when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-                Order savedOrder = invocation.getArgument(0);
-                savedOrder.setId(500);
-                return savedOrder;
-            });
+            when(orderRepository.save(any(Order.class)))
+                    .thenAnswer(invocation -> {
+                        Order savedOrder = invocation.getArgument(0);
+                        savedOrder.setId(500);
+                        return savedOrder;
+                    });
 
             // When
             OrderDto result = orderService.placeOrder(orderRequest);
 
             // Then
             verify(customerService).getCustomerById(1);
+
             verify(productService).getProductById(101);
             verify(productService).deductStock(101, 201, 2);
+
             verify(productService).getProductById(102);
             verify(productService).deductStock(102, 202, 1);
 
-            // Verify order details passed to the repository
             verify(orderRepository).save(orderCaptor.capture());
+
             Order capturedOrder = orderCaptor.getValue();
 
-            assertThat(capturedOrder.getStatus()).isEqualTo(OrderStatus.PROCESSING);
-            assertThat(capturedOrder.getCustomer().getId()).isEqualTo(1);
-            assertThat(capturedOrder.getCustomer().getEmail()).isEqualTo("jane.doe@example.com");
-            assertThat(capturedOrder.getOrderItems()).hasSize(2);
-            assertThat(capturedOrder.getTotalAmount()).isEqualByComparingTo(new BigDecimal("65.50"));
+            assertThat(capturedOrder.getStatus())
+                    .isEqualTo(OrderStatus.PROCESSING);
+
+            assertThat(capturedOrder.getCustomer().getId())
+                    .isEqualTo(1);
+
+            assertThat(capturedOrder.getCustomer().getEmail())
+                    .isEqualTo("jane.doe@example.com");
+
+            assertThat(capturedOrder.getOrderItems())
+                    .hasSize(2);
+
+            assertThat(capturedOrder.getTotalAmount())
+                    .isEqualByComparingTo(new BigDecimal("65.50"));
 
             assertThat(result).isNotNull();
+
+            assertThat(meterRegistry.get("orders.created")
+                    .tag("type", "online")
+                    .counter()
+                    .count())
+                    .isEqualTo(1);
         }
 
         @Test
         @DisplayName("Should throw ResourceNotFoundException when customer is not found")
         void placeOrder_CustomerNotFound_ThrowsException() {
             // Given
-            OrderRequest orderRequest = new OrderRequest(99, List.of(new OrderItemRequest(101, 201, 1)));
+            OrderRequest orderRequest =
+                    new OrderRequest(
+                            99,
+                            List.of(new OrderItemRequest(101, 201, 1))
+                    );
+
             when(customerService.getCustomerById(99))
-                    .thenThrow(new ResourceNotFoundException("Customer not found with id: 99"));
+                    .thenThrow(
+                            new ResourceNotFoundException(
+                                    "Customer not found with id: 99"
+                            )
+                    );
 
             // When / Then
-            assertThatThrownBy(() -> orderService.placeOrder(orderRequest))
+            assertThatThrownBy(
+                    () -> orderService.placeOrder(orderRequest)
+            )
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Customer not found with id: 99");
 
             verifyNoInteractions(productService);
             verifyNoInteractions(orderRepository);
+
+            // Assert the counter was registered but never incremented
+            assertThat(meterRegistry.get("orders.created")
+                    .tag("type", "online")
+                    .counter()
+                    .count())
+                    .isZero();
         }
 
         @Test
         @DisplayName("Should stop and throw exception when stock deduction fails")
         void placeOrder_InsufficientStock_ThrowsException() {
             // Given
-            OrderItemRequest item = new OrderItemRequest(101, 201, 100);
-            OrderRequest orderRequest = new OrderRequest(1, List.of(item));
+            OrderItemRequest item =
+                    new OrderItemRequest(101, 201, 100);
 
-            when(customerService.getCustomerById(1)).thenReturn(sampleCustomerDto);
-            when(productService.getProductById(101)).thenReturn(sampleProduct1);
+            OrderRequest orderRequest =
+                    new OrderRequest(1, List.of(item));
 
-            // Fixed: Updated locationId from 202 to 201 to match the request
+            when(customerService.getCustomerById(1))
+                    .thenReturn(sampleCustomerDto);
+
+            when(productService.getProductById(101))
+                    .thenReturn(sampleProduct1);
+
             doThrow(new IllegalArgumentException("Insufficient stock"))
-                    .when(productService).deductStock(101, 201, 100);
+                    .when(productService)
+                    .deductStock(101, 201, 100);
 
             // When / Then
-            assertThatThrownBy(() -> orderService.placeOrder(orderRequest))
+            assertThatThrownBy(
+                    () -> orderService.placeOrder(orderRequest)
+            )
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Insufficient stock");
 
             verify(orderRepository, never()).save(any());
+
+            // Assert the counter was registered but never incremented
+            assertThat(meterRegistry.get("orders.created")
+                    .tag("type", "online")
+                    .counter()
+                    .count())
+                    .isZero();
         }
     }
 
@@ -179,22 +256,31 @@ class OrderServiceTest {
         void updateOrderStatus_Success() {
             // Given
             Integer orderId = 500;
+
             Order existingOrder = new Order();
             existingOrder.setId(orderId);
             existingOrder.setStatus(OrderStatus.PROCESSING);
 
-            when(orderRepository.findById(orderId)).thenReturn(Optional.of(existingOrder));
+            when(orderRepository.findById(orderId))
+                    .thenReturn(Optional.of(existingOrder));
 
             // When
-            orderService.updateOrderStatus(orderId, OrderStatus.PAID);
+            orderService.updateOrderStatus(
+                    orderId,
+                    OrderStatus.PAID
+            );
 
             // Then
             verify(orderRepository).findById(orderId);
             verify(orderRepository).save(orderCaptor.capture());
 
             Order updatedOrder = orderCaptor.getValue();
-            assertThat(updatedOrder.getId()).isEqualTo(orderId);
-            assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.PAID);
+
+            assertThat(updatedOrder.getId())
+                    .isEqualTo(orderId);
+
+            assertThat(updatedOrder.getStatus())
+                    .isEqualTo(OrderStatus.PAID);
         }
 
         @Test
@@ -202,10 +288,17 @@ class OrderServiceTest {
         void updateOrderStatus_OrderNotFound_ThrowsException() {
             // Given
             Integer orderId = 999;
-            when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+
+            when(orderRepository.findById(orderId))
+                    .thenReturn(Optional.empty());
 
             // When / Then
-            assertThatThrownBy(() -> orderService.updateOrderStatus(orderId, OrderStatus.PROCESSING))
+            assertThatThrownBy(
+                    () -> orderService.updateOrderStatus(
+                            orderId,
+                            OrderStatus.PROCESSING
+                    )
+            )
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessage("Order not found with id: " + orderId);
 
