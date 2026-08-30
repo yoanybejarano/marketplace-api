@@ -30,7 +30,7 @@ public class OrderController {
     }
 
     @Operation(summary = "Place order")
-    @PostMapping
+    @PostMapping("/place-order")
     public ResponseEntity<OrderDto> placeOrder(@Valid @RequestBody OrderRequest orderRequest) {
         OrderDto createdOrder = orderService.placeOrder(orderRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
