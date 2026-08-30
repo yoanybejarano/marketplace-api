@@ -17,6 +17,8 @@ import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -42,10 +44,8 @@ public class Inventory {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "product_id",
-            nullable = false
-    )
+    @JoinColumn(name = "product_id", nullable = false)
+    @JsonBackReference
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

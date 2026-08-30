@@ -19,6 +19,9 @@ import jakarta.persistence.Table;
 
 import org.hibernate.annotations.ColumnDefault;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -61,8 +64,10 @@ public class Product {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @JsonManagedReference
     private List<Inventory> inventories = new ArrayList<>();
 
+    @JsonIgnore
     public int getStockQuantity() {
         return inventories.stream()
                 .mapToInt(Inventory::getAvailableQuantity)

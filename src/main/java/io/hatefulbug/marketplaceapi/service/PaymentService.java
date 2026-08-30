@@ -11,6 +11,7 @@ import io.hatefulbug.marketplaceapi.dto.PaymentDto;
 import io.hatefulbug.marketplaceapi.entity.Order;
 import io.hatefulbug.marketplaceapi.entity.Payment;
 import io.hatefulbug.marketplaceapi.enums.OrderStatus;
+import io.hatefulbug.marketplaceapi.enums.PaymentGatewayType;
 import io.hatefulbug.marketplaceapi.enums.PaymentStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.metric.PaymentMetrics;
@@ -64,6 +65,11 @@ public class PaymentService {
             payment.setPaymentMethod(request.getPaymentMethod());
             payment.setPaymentDate(Instant.now());
 
+            // FIX 1: Set amount, currency, and gateway name
+            payment.setAmount(order.getTotalAmount());
+            payment.setCurrency("USD");
+            payment.setGateway(PaymentGatewayType.FAKE_GATEWAY); // Or paymentGateway.getGatewayName() if available
+
             PaymentRequest gatewayRequest = new PaymentRequest(
                     order.getTotalAmount(),
                     "USD",
@@ -77,6 +83,8 @@ public class PaymentService {
 
             PaymentResponse response = paymentGateway.authorize(gatewayRequest);
             payment.setTransactionId(response.getPaymentId());
+            payment.setAuthorizedAt(Instant.now()); // FIX 2: Set authorization timestamp
+
             LOGGER.info("Gateway auth response received. OrderID: {} | Status: {} | TransactionID: {}",
                     order.getId(), response.getStatus(), response.getPaymentId());
 
@@ -87,6 +95,7 @@ public class PaymentService {
                     PaymentResponse captureResponse = paymentGateway.capture(response.getPaymentId());
 
                     payment.setPaymentStatus(PaymentStatus.CAPTURED);
+                    payment.setCapturedAt(Instant.now()); // FIX 3: Set capture timestamp
                     orderService.updateOrderStatus(order.getId(), OrderStatus.PAID);
                     payment.setGatewayMessage(captureResponse.getMessage());
                     LOGGER.info("Payment successfully captured. TransactionID: {} | OrderID: {} | Amount: USD {}",
@@ -134,7 +143,6 @@ public class PaymentService {
                 }
             }
 
-            // Track outcome with tags for status and payment method
             paymentMetrics.recordPaymentStatus(payment.getPaymentStatus().name(),
                     request.getPaymentMethod().toString());
 
