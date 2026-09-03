@@ -1,4 +1,4 @@
-package io.hatefulbug.marketplaceapi.request;
+package io.hatefulbug.marketplaceapi.payload;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
