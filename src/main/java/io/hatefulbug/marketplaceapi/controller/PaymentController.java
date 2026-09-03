@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/payments")
 @Tag(name = "Payments", description = "Payment management APIs")
-@PreAuthorize("hasRole('ROLE_CUSTOMER')")
+@PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
 public class PaymentController {
 
     private final PaymentService paymentService;

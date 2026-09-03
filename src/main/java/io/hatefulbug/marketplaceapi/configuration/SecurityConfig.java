@@ -1,6 +1,6 @@
 package io.hatefulbug.marketplaceapi.configuration;
 
-import org.apache.logging.log4j.internal.annotation.SuppressFBWarnings;
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,31 +18,45 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import io.hatefulbug.marketplaceapi.auth.JwtAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity // Enables @PreAuthorize on controllers/services
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    @SuppressFBWarnings(
-            value = "EI_EXPOSE_REP2",
-            justification = "JwtAuthenticationFilter is a Spring-managed singleton bean injected via constructor."
-    )
-    private final JwtAuthenticationFilter jwtAuthFilter;
-
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
-        this.jwtAuthFilter = jwtAuthFilter;
-    }
+    // Remove field and constructor entirely
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @SuppressWarnings("java:S4502") // Disabling CSRF is safe for stateless REST APIs using JWTs
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthFilter) throws Exception {
+
         return http
+                // 1. Disable CSRF
                 .csrf(AbstractHttpConfigurer::disable)
+
+                // 2. Enforce stateless session management
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // 3. Define authorization rules
                 .authorizeHttpRequests(auth -> auth
+                        // --- Actuator & Monitoring Endpoints ---
+                        .requestMatchers(EndpointRequest.to("health", "info")).permitAll()
+                        .requestMatchers(EndpointRequest.to("prometheus")).permitAll()
+                        .requestMatchers(EndpointRequest.toAnyEndpoint()).hasRole("ADMIN")
+
+                        // --- Public API Endpoints ---
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+
+                        // --- Role-Based Path Rules ---
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/staff/**").hasAnyRole("ADMIN", "STAFF")
+                        .requestMatchers("/api/customers/**").hasRole("ADMIN")
+
+                        // --- Default Fallback ---
                         .anyRequest().authenticated()
                 )
+
+                // 4. Register JWT authentication filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
