@@ -25,9 +25,9 @@ import io.hatefulbug.marketplaceapi.entity.Product;
 import io.hatefulbug.marketplaceapi.exception.InsufficientStockException;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.metric.ProductMetrics;
+import io.hatefulbug.marketplaceapi.payload.PageResponse;
 import io.hatefulbug.marketplaceapi.repository.InventoryRepository;
 import io.hatefulbug.marketplaceapi.repository.ProductRepository;
-import io.hatefulbug.marketplaceapi.request.PageResponse;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;

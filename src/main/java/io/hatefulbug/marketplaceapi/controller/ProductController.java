@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.hatefulbug.marketplaceapi.dto.ProductDto;
-import io.hatefulbug.marketplaceapi.request.PageResponse;
+import io.hatefulbug.marketplaceapi.payload.PageResponse;
 import io.hatefulbug.marketplaceapi.service.ProductService;
 import io.hatefulbug.marketplaceapi.util.DtoMapperUtil;
 import io.swagger.v3.oas.annotations.Operation;

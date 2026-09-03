@@ -20,10 +20,10 @@ import io.hatefulbug.marketplaceapi.entity.Product;
 import io.hatefulbug.marketplaceapi.enums.OrderStatus;
 import io.hatefulbug.marketplaceapi.exception.ResourceNotFoundException;
 import io.hatefulbug.marketplaceapi.metric.OrderMetrics;
+import io.hatefulbug.marketplaceapi.payload.OrderItemRequest;
+import io.hatefulbug.marketplaceapi.payload.OrderRequest;
 import io.hatefulbug.marketplaceapi.repository.LocationRepository;
 import io.hatefulbug.marketplaceapi.repository.OrderRepository;
-import io.hatefulbug.marketplaceapi.request.OrderItemRequest;
-import io.hatefulbug.marketplaceapi.request.OrderRequest;
 import io.hatefulbug.marketplaceapi.util.DtoMapperUtil;
 
 @Service

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -12,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.hatefulbug.marketplaceapi.dto.OrderDto;
-import io.hatefulbug.marketplaceapi.request.OrderRequest;
-import io.hatefulbug.marketplaceapi.request.StatusUpdateRequest;
+import io.hatefulbug.marketplaceapi.payload.OrderRequest;
+import io.hatefulbug.marketplaceapi.payload.StatusUpdateRequest;
 import io.hatefulbug.marketplaceapi.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +31,7 @@ public class OrderController {
     }
 
     @Operation(summary = "Place order")
+    @PreAuthorize("hasAuthority('ROLE_CUSTOMER')")
     @PostMapping("/place-order")
     public ResponseEntity<OrderDto> placeOrder(@Valid @RequestBody OrderRequest orderRequest) {
         OrderDto createdOrder = orderService.placeOrder(orderRequest);
@@ -37,6 +39,7 @@ public class OrderController {
     }
 
     @Operation(summary = "Update order status")
+    @PreAuthorize("hasAnyAuthority('ROLE_STAFF', 'ROLE_ADMIN')")
     @PutMapping("/{id}/status")
     public ResponseEntity<Void> updateOrderStatus(
             @PathVariable Integer id,

@@ -2,7 +2,7 @@ package io.hatefulbug.marketplaceapi.util;
 
 import org.springframework.data.domain.Page;
 
-import io.hatefulbug.marketplaceapi.request.PageResponse;
+import io.hatefulbug.marketplaceapi.payload.PageResponse;
 
 public class PageUtil {
 
